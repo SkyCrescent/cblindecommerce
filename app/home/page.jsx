@@ -4,12 +4,12 @@ import React, {useEffect} from 'react';
 import {useState} from "react";
 import { motion } from "framer-motion";
 
-import Pied2 from  "@/components/Pied 2"
-import Barre from "@/components/Barre"
+import Pied2 from  "../../components/Pied 2"
+import Barre from "../../components/Barre"
 import Image from 'next/image'
 import {useRouter} from "next/navigation";
 
-import logo from "@/public/media/sites.jpg";
+import logo from "../../public/media/sites.jpg";
 export default function Home() {
     const router = useRouter();
 
@@ -212,7 +212,7 @@ export default function Home() {
                 <div className="relative flex justify-between items-center py-8 px-10 z-30">
 
                     {/* LEFT TEXT BLOCK */}
-                    <div className="w-[40%] font-[Segoe UI] leading-snug">
+                    <div className="w-[40%]  leading-snug">
 
                         <h6 className="text-blue-600 text-lg font-semibold tracking-wide mb-5">
                             BIENVENU SUR
@@ -279,6 +279,7 @@ export default function Home() {
                             ))}
 
                         </div>
+
                     </div>
 
                     {/* RIGHT IMAGE BLOCK */}

@@ -19,8 +19,8 @@ export default function Barre() {
             <div className="w-52 items-center">
                 <Image
                     src={ImageSrc}
-                    height={150}
-                    width={290}
+                    height={520}
+                    width={600}
                     alt="Logo"
                     className="mx-4 my-4"
                 />
