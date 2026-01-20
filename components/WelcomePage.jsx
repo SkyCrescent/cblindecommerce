@@ -1,9 +1,10 @@
 'use client'
 import React, {useEffect} from 'react';
 import {useState} from "react";
-
+import axios from "axios"
 //import Barre from "../components/Barre"
 import Image from "next/image";
+import {useRouter} from "next/navigation";
 
 export default function WelcomePage(){
    const [openSubMenuId, setOpenSubMenuId] = useState(false);

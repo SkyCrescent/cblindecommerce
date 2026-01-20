@@ -1,30 +1,48 @@
 "use client";
 
 import React, { useState } from "react";
+import {router} from "next/client";
+import {useRouter} from "next/navigation";
 
 export default function AdminLogin() {
-    const [focus, SetFocus] = useState(false);
+    const [focus, setFocus] = useState({ nom: false, prenom: false });
     const [isSubmit, setIsSubmit] = useState(false);
-
-    const [values, setValues] = useState({
-        nom: "",
-        prenom: "",
-    });
+    const [values, setValues] = useState({ nom: "", prenom: "" });
+    const [errors, setErrors] = useState({ nom: false, prenom: false });
+    const router = useRouter();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-
-        // Expression régulière pour lettres avec accents et chiffres
+        // Lettres avec accents et chiffres uniquement
         const regex = /^[\p{L}\p{N}\s'-]*$/u;
-
-        // Teste si la nouvelle valeur est autorisée
         if (regex.test(value)) {
             setValues({ ...values, [name]: value });
-            console.log(values);
+            setErrors({ ...errors, [name]: false });
         }
     };
 
-    // tes champs sous forme d'array
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        setIsSubmit(true);
+
+        const tempErrors = {
+            nom: !values.nom.trim(),
+            prenom: !values.prenom.trim(),
+        };
+        setErrors(tempErrors);
+
+        if (tempErrors.nom || tempErrors.prenom) return;
+
+        // Vérifie les identifiants
+        if (values.nom === "Orion" && values.prenom === "78945") {
+            router.push("/admin/home");
+        } else {
+            setValues({ nom: "", prenom: "" });
+            setErrors({ nom: true, prenom: true });
+            setIsSubmit(true);
+        }
+    };
+
     const input = [
         {
             id: 1,
@@ -33,35 +51,22 @@ export default function AdminLogin() {
             type: "text",
             value: values.nom,
             error: "Veuillez entrer votre nom",
-            className:
-                "border border-gray-300 rounded-lg h-12 w-full px-4 focus:outline-none focus:ring-2 focus:ring-blue-600",
         },
         {
             id: 2,
             name: "prenom",
-            label: "Prénom",
+            label: "Mot de passe",
             type: "text",
             value: values.prenom,
             error: "Veuillez entrer votre prénom",
-            className:
-                "border border-gray-300 rounded-lg h-12 w-full px-4 focus:outline-none focus:ring-2 focus:ring-blue-600",
         },
     ];
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        setIsSubmit(true);
-
-        if (values.nom === "" || values.prenom === "") return;
-
-        console.log("Admin connecté :", values);
-    };
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 py-10 px-4">
             <div className="absolute inset-0 bg-gradient-to-l from-blue-900/30 to-transparent z-10"/>
 
-            <div className="relative z-20  w-[45%] bg-white shadow-2xl rounded-md p-8 space-y-8">
+            <div className="relative z-20 w-[45%] bg-white shadow-2xl rounded-md p-8 space-y-8">
 
                 {/* TITRE */}
                 <div className="text-center">
@@ -72,61 +77,44 @@ export default function AdminLogin() {
                 </div>
 
                 {/* FORMULAIRE */}
-                <div onSubmit={handleSubmit} className="space-y-8">
-                    <div className="relative w-[100%]  space-y-6">
-                        {input.map((inputs) => (
-                            <div
-                                className="relative rounded-md h-20 w-[80%]  mx-auto flex flex-col items-center justify-center"
-                                key={inputs.id}>
-                                <div className="absolute w-full  ">
+                <form onSubmit={handleSubmit} className="space-y-8">
+                    <div className="relative w-full space-y-6">
+                        {input.map((inputs) => {
+                            const hasError = isSubmit && errors[inputs.name];
+                            return (
+                                <div key={inputs.id} className="relative w-[80%] mx-auto h-20 flex flex-col justify-center">
                                     <input
-                                        onFocus={() => SetFocus(true)}
-                                        onBlur={() => SetFocus(false)}
                                         type={inputs.type}
                                         name={inputs.name}
-                                        className={inputs.className}
-                                        onChange={(e) => handleChange(e)}
                                         value={inputs.value}
-                                        defaultValue={inputs.defaultValue}
+                                        onChange={handleChange}
+                                        onFocus={() => setFocus({ ...focus, [inputs.name]: true })}
+                                        onBlur={() => setFocus({ ...focus, [inputs.name]: false })}
+                                        className={`text-xl w-full text-gray-700 bg-white/75 border rounded-xl py-2 px-10 h-14 focus:outline-none transition
+                                            ${hasError ? "border-red-600 focus:border-red-600" : "border-gray-300 focus:border-blue-500"}`}
                                     />
-                                    {inputs.img ? (
-                                        <img src={inputs.img} alt=""
-                                             className="absolute right-16 top-[26%] cursor-pointer   transition duration-300 transform hover:scale-125"
-                                             width={30}
-                                             height={30} onClick={() => showChar(inputs.id)}/>
-                                    ) : null}
                                     <span
-                                        className={(focus || input.value) ? "absolute left-3 p-1  w-auto top-7 text-xs font-bold text-blue-900 -translate-y-12 duration-300" : "absolute tracking-wide  pointer-events-none duration-300 left-0 top-2 px-10 text-sky-900"}>
-                    {inputs.label}
-                          </span>
-
-
+                                        className={`absolute left-3 p-1 w-auto top-7 text-[15px] font-sans text-blue-900 transition-all duration-300
+                                        ${focus[inputs.name] || inputs.value ? "-translate-y-12" : "top-[15px] text-sky-900"}`}>
+                                        {inputs.label}
+                                    </span>
+                                    {hasError && (
+                                        <div className="text-[70%] text-red-600 mt-1">{inputs.error}</div>
+                                    )}
                                 </div>
-                                <div>
-                                    {/*{ Errors[inputs.name]  ? (<> <div className="text-[75%] text-red-600"> {inputs.error} </div> </> ): null  }*/}
-                                    {isSubmit && inputs.error ? (
-                                        <div className=" text-[70%] text-red-600">{inputs.error}</div>
-                                    ) : null}
-                                </div>
-
-
-                            </div>
-
-                        ))}
+                            );
+                        })}
                     </div>
 
                     {/* BOUTON */}
                     <button
                         type="submit"
-                        className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition"
+                        className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition transform hover:scale-105"
                     >
                         Se connecter
                     </button>
-                </div>
-
+                </form>
             </div>
-
         </div>
-
     );
 }

@@ -3,144 +3,171 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import NavBar from "../../../../components/NavBar";
+import Image from "next/image";
+import axios from "axios";
 
 export default function NouveauProduit() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     const router = useRouter();
-
-    const [values, setValues] = useState({
-        nom: "",
-        prix: "",
-        quantite: "",
-        catalogue: "",
-        photo: null,
-    });
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [values, setValues] = useState({ nom: "", details: "", photo: "" });
+    const [errors, setErrors] = useState({});
     const [focus, setFocus] = useState(false);
-    const [preview, setPreview] = useState(null);
-    const [isSubmit, setIsSubmit] = useState(false);
+    const [dialog, setDialog] = useState({ open: false, message: "", type: "" });
 
     const inputFields = [
         { id: 1, name: "nom", type: "text", label: "Nom de la catalogue", value: values.nom },
-        { id: 2, name: "Description", type: "text", label: "Description", value: values.prix },
-        // { id: 3, name: "quantite", type: "text", label: "Quantité", value: values.quantite },
+        { id: 2, name: "details", type: "text", label: "Description", value: values.details },
     ];
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setValues({ ...values, [name]: value });
+        if (name === "nom" || name === "details") {
+            let cleaned = value.replace(/[^\w\s]/gi, "");
+            cleaned = cleaned.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+            setValues({ ...values, [name]: cleaned });
+        }
     };
 
-    const handlePhoto = (e) => {
-        const file = e.target.files[0];
-        setValues({ ...values, photo: file });
-        if (file) setPreview(URL.createObjectURL(file));
+    const handlePhoto = async (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const allowed = ["jpg", "jpeg", "png", "gif"];
+            const ext = file.name.split(".").pop().toLowerCase();
+            if (allowed.includes(ext)) {
+                setSelectedFile(file);
+                setValues({ ...values, photo: `media/foods/${file.name}` });
+            } else {
+                console.log("Fichier non autorisé");
+            }
+        } else {
+            setSelectedFile(null);
+            setValues({ ...values, photo: "" });
+        }
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        setIsSubmit(true);
-        console.log("Nouveau produit :", values);
-        alert("Produit ajouté !");
-        router.push("/admin/catalogue");
+    const handleSubmit = async () => {
+        let newErrors = {};
+        if (!values.nom.trim()) newErrors.nom = "Nom invalide";
+        if (!values.details.trim()) newErrors.details = "Détail requis";
+        if (!values.photo.trim()) newErrors.photo = "Photo requise";
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            setDialog({ open: true, message: "Veuillez remplir correctement tous les champs.", type: "error" });
+            return;
+        }
+
+        setErrors({});
+        try {
+            await axios.post(`${apiUrl}/NewCatalogue`, values);
+            setDialog({ open: true, message: "Catalogue ajouté avec succès 🎉", type: "success" });
+            setValues({ nom: "", details: "", photo: "" });
+            setSelectedFile(null);
+        } catch (error) {
+            console.error(error);
+            setDialog({ open: true, message: "Erreur lors de l'ajout du produit !", type: "error" });
+        }
     };
 
     return (
-        <div className="min-h-screen  bg-gray-100 relative">
-            {/* Dégradé derrière le formulaire */}
+        <div className="min-h-screen bg-gray-100 relative p-4 md:p-6">
             <div className="absolute inset-0 bg-gradient-to-l from-blue-900/30 to-transparent z-0"/>
 
             {/* Navbar */}
-            <div className="relative z-30 w-[80%] mx-auto">
+            <div className="relative z-30 w-full md:w-[80%] mx-auto mb-6">
                 <NavBar/>
             </div>
 
-            {/* Formulaire centré */}
-            <div className="relative z-30 w-[50%]  mx-auto mt-2 bg-white p-8 rounded-2xl shadow-xl">
-                <h1 className="text-2xl font-bold text-blue-700 mb-8 text-center">
-                    Ajout de nouveau catalogue
-                </h1>
+            {/* Formulaire */}
+            <div className="relative z-30 w-full max-w-4xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-xl">
+                <h1 className="text-2xl md:text-3xl font-bold text-blue-700 mb-6 text-center">Ajout de nouveau catalogue</h1>
 
-                <div onSubmit={handleSubmit} className="space-y-6">
-                    {/* Ligne avec photo à gauche et inputs à droite */}
-                    <div
-                        className="flex flex-col md:flex-row items-start md:items-center space-x-0 md:space-x-6 space-y-6 md:space-y-0">
-                        {/* Photo */}
-                        <label
-                            className="w-52 h-52 rounded-full border-2 border-gray-300 overflow-hidden cursor-pointer flex justify-center items-center flex-shrink-0">
-                            {preview ? (
-                                <img src={preview} alt="preview" className="w-full h-full object-cover"/>
+                <div className="flex flex-col md:flex-row gap-6">
+                    {/* Photo */}
+                    <div className="w-full md:w-60 h-60 mx-auto md:mx-0 rounded-full overflow-hidden shadow-xl ring-4 ring-white hover:scale-105 transition-all duration-300">
+                        <label htmlFor="imageInput2" className="w-full h-full cursor-pointer">
+                            <input
+                                type="file"
+                                id="imageInput2"
+                                accept=".jpg,.jpeg,.png"
+                                className="sr-only"
+                                onChange={handlePhoto}
+                            />
+                            {selectedFile ? (
+                                <img
+                                    src={URL.createObjectURL(selectedFile)}
+                                    alt="Image sélectionnée"
+                                    className="w-full h-full object-cover rounded-full"
+                                />
                             ) : (
-                                <span className="text-gray-400 text-sm text-center">Photo</span>
-                            )}
-                            <input type="file" accept="image/*" className="hidden" onChange={handlePhoto}/>
-                        </label>
-
-                        {/* Inputs */}
-                        <div className=" space-y-4 relative w-[60%]">
-                            {inputFields.map((input) => (
-                                <div key={input.id} className="relative w-full h-16">
-                                    <input
-                                        type={input.type}
-                                        name={input.name}
-                                        value={input.value}
-                                        onChange={handleChange}
-                                        onFocus={() => setFocus(true)}
-                                        onBlur={() => setFocus(false)}
-                                        className="text-gray-700 bg-white/75 border border-gray-300 rounded-lg py-3 px-4 w-full focus:outline-none focus:border-blue-500"
-                                    />
-                                    <span
-                                        className={
-                                            focus || input.value
-                                                ? "absolute left-3 top-0 text-xs text-blue-900 font-bold -translate-y-5 duration-300"
-                                                : "absolute left-3 top-3 text-sky-900 text-sm duration-300 pointer-events-none"
-                                        }
-                                    >
-                {input.label}
-              </span>
+                                <div className="w-full h-full bg-gradient-to-br from-slate-200 to-gray-300 rounded-full flex items-center justify-center">
+                                    <Image src="/picture.png" alt="Placeholder" width={40} height={40}/>
                                 </div>
-                            ))}
-
-                            {/* Catalogue */}
-                            {/*<div className="relative w-full h-16">*/}
-                            {/*    <select*/}
-                            {/*        name="catalogue"*/}
-                            {/*        value={values.catalogue}*/}
-                            {/*        onChange={handleChange}*/}
-                            {/*        className="text-gray-700 bg-white/75 border border-gray-300 rounded-lg py-3 px-4 w-full focus:outline-none focus:border-blue-500"*/}
-                            {/*    >*/}
-                            {/*        <option value="">Choisissez un catalogue</option>*/}
-                            {/*        <option value="informatique">Informatique</option>*/}
-                            {/*        <option value="automobile">Automobile</option>*/}
-                            {/*        <option value="mode">Mode & Chaussures</option>*/}
-                            {/*        <option value="sport">Sport</option>*/}
-                            {/*        <option value="enfant">Jouets & Enfants</option>*/}
-                            {/*        <option value="maison">Maison</option>*/}
-                            {/*    </select>*/}
-                            {/*    /!*                    <span*!/*/}
-                            {/*    /!*                        className={*!/*/}
-                            {/*    /!*                            focus || values.catalogue*!/*/}
-                            {/*    /!*                                ? "absolute left-3 top-0 text-xs text-blue-900 font-bold -translate-y-5 duration-300"*!/*/}
-                            {/*    /!*                                : "absolute left-3 top-3 text-sky-900 text-sm duration-300 pointer-events-none"*!/*/}
-                            {/*    /!*                        }*!/*/}
-                            {/*    /!*                    >*!/*/}
-                            {/*    /!*  Catalogue*!/*/}
-                            {/*    /!*</span>*!/*/}
-                            {/*</div>*/}
-
-                        </div>
+                            )}
+                        </label>
                     </div>
 
-                    {/* Bouton */}
+                    {/* Inputs */}
+                    <div className="flex-1 flex flex-col gap-4">
+                        {inputFields.map((input) => (
+                            <div key={input.id} className="relative w-full h-16">
+                                <input
+                                    type={input.type}
+                                    name={input.name}
+                                    value={input.value}
+                                    onChange={handleChange}
+                                    onFocus={() => setFocus(true)}
+                                    onBlur={() => setFocus(false)}
+                                    className={`text-gray-700 bg-white/75 border rounded-lg py-3 px-4 w-full focus:outline-none
+                                        ${errors[input.name] ? "border-red-500" : "border-gray-300 focus:border-blue-500"}
+                                    `}
+                                />
+                                <span className={focus || input.value
+                                    ? "absolute left-3 top-0 text-xs text-blue-900 font-bold -translate-y-5 duration-300"
+                                    : "absolute left-3 top-3 text-sky-900 text-sm duration-300 pointer-events-none"
+                                }>
+                                    {input.label}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Boutons */}
+                <div className="mt-6 flex flex-col md:flex-row gap-4">
                     <button
-                        type="submit"
-                        className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 hover:scale-105 transition"
+                        className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 hover:scale-105 transition"
+                        onClick={handleSubmit}
                     >
                         Ajouter le catalogue
                     </button>
+                    <button
+                        className="flex-1 bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 hover:scale-105 transition"
+                        onClick={() => router.back()}
+                    >
+                        Annuler
+                    </button>
                 </div>
-
-
             </div>
-        </div>
 
+            {/* Dialog */}
+            {dialog.open && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm text-center">
+                        <h2 className={`text-lg font-semibold mb-3 ${dialog.type === "error" ? "text-red-600" : "text-green-600"}`}>
+                            {dialog.type === "error" ? "Des informations sont manquantes" : "Succès"}
+                        </h2>
+                        <p className="text-gray-700 mb-4">{dialog.message}</p>
+                        <button
+                            onClick={() => setDialog({ ...dialog, open: false })}
+                            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 transition w-32 mx-auto"
+                        >
+                            OK
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }

@@ -2,17 +2,23 @@
 
 import React, {useEffect} from 'react';
 import {useState} from "react";
-import { motion } from "framer-motion";
-
+import {AnimatePresence, motion} from "framer-motion";
 import Pied2 from  "../../components/Pied 2"
 import Barre from "../../components/Barre"
-import Image from 'next/image'
 import {useRouter} from "next/navigation";
 
 import logo from "../../public/media/sites.jpg";
+import axios from "axios";
 export default function Home() {
     const router = useRouter();
-
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ;
+    const [produits, setproduits] = useState([]);
+    const [filteredProduits, setFilteredProduits] = useState([]);
+    const [ IscompteExisting, SetIscompteExisting] = useState(false);
+    const [activeIndex, setActiveIndex] = useState(0);
+    const [paused, setPaused] = useState(false);
+    const [userId, setUserId] = useState(null);
+    const [userName, setUserName] = useState("");
     const item2 = [
         {
             "id": 1,
@@ -139,6 +145,25 @@ export default function Home() {
             stock: 0
         }
     ]
+    const imagesCarousel = [
+        "/media/sites.jpg",
+        "/media/Explained.jpg",
+        "/media/business.JPG",
+        "/media/1729658511260.JPG",
+    ];
+    const encryptedData = "";
+    useEffect(() => {
+        if (paused) return; // ⛔ Stopper si souris dessus
+
+        const interval = setInterval(() => {
+            setActiveIndex(prev => (prev + 1) % imagesCarousel.length);
+        }, 15000);
+
+        return () => clearInterval(interval);
+    }, [paused]);
+
+
+
     const colors = [
         "bg-red-500/40",
         "bg-blue-500/40",
@@ -149,7 +174,7 @@ export default function Home() {
         "bg-teal-500/40"
     ];
 
-    const [loading2 , SetLoading2 ] = useState(false)
+    const [loading2 , SetLoading2 ] = useState(true)
 
     const [isSubmit,SetIsSubmit] = useState(false)
     const [scrollIndex2, setScrollIndex2] = useState(0);
@@ -169,8 +194,6 @@ export default function Home() {
     const [focus , SetFocus] = useState(false)
     const [values, setValues] = useState({
         username: "",
-        password: "",
-        date:""
     });
     const input = [
         { id: 1, name: "username", type: "text", placeholder: "Nom",value: values.username   ,label: "Entrez votre le nom du produits", className: `text-xl w-[90%] text-gray-700 bg-white/75 border rounded-lg border-gray-300 py-2 px-10 h-14 focus:outline-none focus:border-blue-500 `,
@@ -180,69 +203,117 @@ export default function Home() {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-
-        // Expression régulière pour lettres avec accents et chiffres
-        const regex = /^[\p{L}\p{N}\s'-]*$/u;
-
-        // Teste si la nouvelle valeur est autorisée
-        if (regex.test(value)) {
-            setValues({ ...values, [name]: value });
-            console.log(values);
-        }
+        let cleanedAddress = '';
+        cleanedAddress = value.replace(/[^\w\s]/gi, '');
+        // 3) Title Case : première lettre de chaque mot en majuscule
+        cleanedAddress = cleanedAddress.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+        setValues({ ...values, [name]: cleanedAddress });
     };
+
     useEffect(() => {
 
         SetLoading2(true)
+
+
+    }, []);
+
+
+
+        const getData = async () => {
+            try {
+                const response = await axios.get(`${apiUrl}/AllProduits`);
+                console.log(response.data.data )
+                if (response.data.data  && response.data.data.length > 0) {
+                    // Vérifiez que la réponse contient les données attendues
+                    console.log("la jointure",response.data)
+                    setproduits(response.data.data)
+
+                    SetLoading2(false)
+                } else {
+                    console.log("La réponse de l'API est incorrecte ou ne contient pas de données.",response.data);
+                }
+            } catch (error) {
+                console.error("Une erreur s'est produite lors de la récupération des données de l'API : ", error);
+            }
+        };
+
+    useEffect(()=>{
+        getData();
+    },[])
+    // Filtrer à chaque changement de input
+    useEffect(() => {
+        if (values.username === "") {
+            setFilteredProduits(produits); // si vide, afficher tout
+        } else {
+            const filtered = produits.filter(p =>
+                p.nom.toLowerCase().includes(values.username.toLowerCase())
+            );
+            setFilteredProduits(filtered);
+        }
+    }, [values.username, produits]); // déclenche quand input ou produits change
+
+    useEffect(() => {
+        const authUser = JSON.parse(localStorage.getItem("authUser"));
+
+        if (authUser) {
+            SetIscompteExisting(true);
+            setUserId(authUser.id || null);     // récupère l'edit
+            setUserName(authUser.nom || "");    // récupère le nom
+        } else {
+            SetIscompteExisting(false);
+            setUserId(null);
+            setUserName("");
+        }
     }, []);
 
 
     return (
-
-
         <>
             <div className="relative min-h-screen bg-white">
+
+                {/* Gradient */}
                 <div className="absolute inset-0 bg-gradient-to-l from-blue-900/30 to-transparent z-10"/>
 
-                {/* Navbar visible en haut */}
+                {/* Navbar */}
                 <div className="relative z-30">
                     <Barre/>
                 </div>
 
-                {/* Section contenant l’image réduite et centrée */}
-                <div className="relative flex justify-between items-center py-8 px-10 z-30">
+                {/* Hero section */}
+                <div
+                    className="relative flex flex-col md:flex-row justify-between items-center py-6 px-4 md:py-8 md:px-10 z-30">
 
                     {/* LEFT TEXT BLOCK */}
-                    <div className="w-[40%]  leading-snug">
+                    <div className="w-full md:w-2/5 leading-snug mb-8 md:mb-0">
 
-                        <h6 className="text-blue-600 text-lg font-semibold tracking-wide mb-5">
+                        <h6 className="text-blue-600 text-lg font-semibold tracking-wide mb-3 md:mb-5">
                             BIENVENU SUR
                         </h6>
 
-                        <h1 className="text-4xl font-extrabold leading-tight text-gray-900">
-                            La principale plateforme<br/>
+                        <h1 className="text-3xl sm:text-4xl md:text-4xl font-extrabold leading-tight text-gray-900">
+                            La plateforme<br/>
                             e-commerce de
                         </h1>
 
-                        <h1 className="text-5xl font-black text-blue-600 mt-2 tracking-wide">
+                        <h1 className="text-4xl sm:text-5xl md:text-5xl font-black text-blue-600 mt-2 tracking-wide">
                             C-BLIND
                         </h1>
 
                         <motion.div
                             animate={{y: [0, -8, 0]}}
                             transition={{repeat: Infinity, duration: 2}}
-                            className="text-sm py-10 font-bold"
+                            className="text-sm py-6 md:py-10 font-bold"
                         >
-                            + de 600 Produits disponibles dans plusieurs catégories.
+                            + des millions de produits disponibles dans plusieurs catégories.
                         </motion.div>
 
-                        {/* Zone du input */}
-                        <div className="relative w-[110%] mt-1 -ml-2">
-                            {/* ton code input ici */}
+                        {/* Input zone */}
+                        <div className="relative w-full mt-4">
                             {input.map((inputs) => (
                                 <div
-                                    className="rounded-md h-20 w-full  mx-auto flex flex-col items-center justify-center"
+                                    className="rounded-md h-16 sm:h-20 w-full mx-auto flex flex-col items-center justify-center mb-4"
                                     key={inputs.id}>
-                                    <div className="absolute w-full  ">
+                                    <div className="absolute w-full">
                                         <input
                                             onFocus={() => SetFocus(true)}
                                             onBlur={() => SetFocus(false)}
@@ -253,68 +324,87 @@ export default function Home() {
                                             value={inputs.value}
                                             defaultValue={inputs.defaultValue}
                                         />
-                                        {inputs.img ? (
-                                            <img src={inputs.img} alt=""
-                                                 className="absolute right-16 top-[26%] cursor-pointer   transition duration-300 transform hover:scale-125"
-                                                 width={30}
-                                                 height={30} onClick={() => showChar(inputs.id)}/>
-                                        ) : null}
+                                        {inputs.img && (
+                                            <img
+                                                src={inputs.img}
+                                                alt=""
+                                                className="absolute hidden md:flex right-3 sm:right-16 top-[26%] cursor-pointer transition duration-300 transform hover:scale-125"
+                                                width={30}
+                                                height={30}
+                                                //onClick={() => showChar(inputs.edit)}
+                                            />
+                                        )}
                                         <span
-                                            className={(focus || values.username) ? "absolute left-3 p-1  w-auto top-7 text-xs font-bold text-blue-900 -translate-y-12 duration-300" : "absolute tracking-wide  pointer-events-none duration-300 left-0 top-[17px] px-10 text-sky-900"}>
-                    {inputs.label}
-                          </span>
-
-
+                                            className={(focus || values.username)
+                                                ? "absolute left-3 p-1 w-auto top-7 text-xs font-bold text-blue-900 -translate-y-12 duration-300"
+                                                : "absolute tracking-wide pointer-events-none duration-300 left-0 top-[17px] px-10 text-sky-900"}>
+                {inputs.label}
+              </span>
                                     </div>
                                     <div>
-                                        {/*{ Errors[inputs.name]  ? (<> <div className="text-[75%] text-red-600"> {inputs.error} </div> </> ): null  }*/}
-                                        {isSubmit && inputs.error ? (
-                                            <div className=" text-[70%] text-red-600">{inputs.error}</div>
-                                        ) : null}
+                                        {isSubmit && inputs.error && (
+                                            <div className="text-[70%] text-red-600">{inputs.error}</div>
+                                        )}
                                     </div>
-
-
                                 </div>
-
                             ))}
-
                         </div>
-
                     </div>
 
                     {/* RIGHT IMAGE BLOCK */}
                     <motion.div
+                        onMouseEnter={() => setPaused(true)}
+                        onMouseLeave={() => setPaused(false)}
                         initial={{opacity: 0, scale: 0.9}}
                         animate={{opacity: 1, scale: 1}}
                         transition={{duration: 1.2}}
-                        className="w-[60%] ml-36"
+                        className="w-full md:w-3/5 flex justify-center md:justify-end"
                     >
-                        <img
-                            className="rounded-3xl w-[620px] h-[350px] object-cover shadow-lg"
-                            src={logo.src}
-                            alt="Image"
-                        />
+                        <AnimatePresence mode="wait">
+                            <motion.img
+                                key={activeIndex}
+                                src={imagesCarousel[activeIndex]}
+                                className="rounded-3xl w-full sm:w-[450px] md:w-[620px] h-[250px] sm:h-[350px] md:h-[350px] object-cover shadow-lg"
+                                initial={{opacity: 0}}
+                                animate={{opacity: 1}}
+                                exit={{opacity: 0}}
+                                transition={{duration: 1.2}}
+                            />
+                        </AnimatePresence>
                     </motion.div>
-
                 </div>
 
-
-                <br></br>
-
-                <div className="relative w-full py-6 p-6 z-30">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {loading2 &&
-                            item.map((item, index) => {
-
+                {/* Products / Grid section */}
+                <div className="relative w-full py-6 px-4 sm:px-6 z-30 min-h-[400px]">
+                    {loading2 ? (
+                        // Spinner centré
+                        <div className="absolute inset-0 flex items-center justify-center z-50">
+                            <motion.div
+                                animate={{rotate: 360, borderColor: ["#000000", "#007BFF", "#000000"]}}
+                                transition={{
+                                    rotate: {repeat: Infinity, duration: 2, ease: "linear"},
+                                    borderColor: {repeat: Infinity, duration: 3, ease: "easeInOut"},
+                                }}
+                                className="absolute w-24 sm:w-32 h-24 sm:h-32 rounded-full border-t-4 border-gray-200"
+                            />
+                            <motion.div
+                                animate={{rotate: -360}}
+                                transition={{repeat: Infinity, duration: 2, ease: "linear"}}
+                                className="absolute w-16 sm:w-24 h-16 sm:h-24 rounded-full border-b-4 border-yellow-500"
+                            />
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                            {filteredProduits.map((item, index) => {
                                 const overlayColor = colors[Math.floor(Math.random() * colors.length)];
-
                                 return (
                                     <div
                                         key={index}
+                                        onClick={() => router.push(`/home/infos?id=${encodeURIComponent(btoa(item.id))}`)}
                                         className="relative group bg-white rounded-xl border border-gray-200 overflow-hidden cursor-pointer transform transition duration-300 hover:scale-105 hover:shadow-xl"
                                     >
                                         {/* IMAGE */}
-                                        <div className="w-full h-48 md:h-56 overflow-hidden rounded-t-xl">
+                                        <div className="w-full h-48 sm:h-56 overflow-hidden rounded-t-xl">
                                             <img
                                                 src={`/${item.photo}`}
                                                 alt={item.nom}
@@ -324,31 +414,25 @@ export default function Home() {
 
                                         {/* NOM */}
                                         <div className="p-4 text-center">
-                                            <h2 className="text-sm md:text-base text-gray-800 font-medium">
-                                                {item.nom}
-                                            </h2>
+                                            <h2 className="text-sm sm:text-base text-gray-800 font-medium">{item.nom}</h2>
                                         </div>
 
                                         {/* OVERLAY AU HOVER */}
                                         <div
                                             className={`absolute inset-0 bg-black/50 ${overlayColor} flex flex-col justify-center items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300`}
                                         >
-                                            {/* Prix */}
                                             <p className="text-white text-lg font-bold">
-                                                {item.prix ? item.prix + " $ USD" : "—"}
+                                                {item.prix ? item.prix + " FCFA" : "—"}
                                             </p>
-
-                                            {/* Stock */}
                                             <p className="text-white text-sm">
-                                                {item.stock > 0
-                                                    ? `${item.stock} restants`
-                                                    : "Rupture de stock"}
+                                                {item.quantite > 0 ? `${item.quantite} restants` : "Rupture de stock"}
                                             </p>
-
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    router.push(`/home/infos/${item.id}`);
+                                                    IscompteExisting
+                                                        ? router.push(`/home/infos?id=${encodeURIComponent(btoa(item.id))}`)
+                                                        : router.push("/home/login");
                                                 }}
                                                 className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 hover:scale-105 transition"
                                             >
@@ -358,16 +442,14 @@ export default function Home() {
                                     </div>
                                 );
                             })}
-                    </div>
+                        </div>
+                    )}
                 </div>
 
-                <br></br>
-                <div
-                    className="relative  h-auto  z-30">
-
+                {/* Footer */}
+                <div className="relative h-auto z-30">
                     <Pied2/>
                 </div>
-
             </div>
 
         </>
